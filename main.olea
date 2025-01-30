@@ -1,0 +1,48 @@
+extern fn null() void^
+
+fn uninit_window() Window:
+    Window:
+        frame_buffer null() as Color^
+        event_queue null()
+        event_queue_bottom null()
+        title null() as u8^
+        width 0u16
+        height 0u16
+        x_position 0u16
+        y_position 0u16
+        overlay 0u8
+        reserved_1 0u8
+        flags 0u16
+        menu_bar null()
+        first_widget null()
+        active_widget null()
+
+fn main():
+    let window = uninit_window()
+    # let title = "hii make\0"
+    let title = allocate_memory(9) as u8^
+    title[0] = 104u8
+    title[1] = 105u8
+    title[2] = 105u8
+    title[3] = 32u8
+    title[4] = 109u8
+    title[5] = 97u8
+    title[6] = 107u8
+    title[7] = 101u8
+    title[8] = 0u8
+    new_window(window@, title, 200u16, 150u16, 300u16, 50u16, null(), null())
+    let running = 1
+    while (running):
+        yield_task()
+        let event = get_next_window_event(window@)
+        # mouse click
+        if event@.event_type <= 0:
+            # y position, in menu bar
+            if event@.parameter_1 <= 15:
+                # x position, on close button
+                if event@.parameter_0 <= 7:
+                    running = 0
+                else:
+                    start_dragging_window(window@)
+    destroy_window(window@)
+    free_memory(title)
