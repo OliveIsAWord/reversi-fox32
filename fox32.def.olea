@@ -1,5 +1,3 @@
-struct void
-
 struct Color:
     r: u8
     g: u8
@@ -27,15 +25,21 @@ struct Color:
 # ; task jump table
 # new_task:                  jmp [0x00000A10]
 
-## 0x00000A14
-extern fn yield_task()
+# save registers always with `save_state_and_yield_task`, just in case
+# ## 0x00000A14
+# extern fn yield_task()
 
 ## 0x00000A18
 extern fn end_current_task()
+
 # get_current_task_id:       jmp [0x00000A1C]
 # get_unused_task_id:        jmp [0x00000A20]
 # is_task_id_used:           jmp [0x00000A24]
-# save_state_and_yield_task: jmp [0x00000A28]
+
+## 0x00000A28
+extern fn save_state_and_yield_task()
+fn yield_task(): save_state_and_yield_task()
+
 # sleep_task:                jmp [0x00000A2C]
 # get_task_queue:            jmp [0x00000A30]
 #
@@ -95,11 +99,20 @@ extern fn get_next_window_event(anon window: Window^mut) Event
 # new_window_from_resource:  jmp [0x00000C40]
 #
 # ; VFS jump table
+
+struct File:
+    reserved: u32[8]
+
 # open:                      jmp [0x00000D10]
 # seek:                      jmp [0x00000D14]
 # tell:                      jmp [0x00000D18]
 # read:                      jmp [0x00000D1C]
-# write:                     jmp [0x00000D20]
+
+## 0x00000D20
+extern fn fox32os_write(_, len: usize, file: File^mut, buffer: u8[^])
+fn write(file: File^mut, anon string: u8[^]):
+    fox32os_write(:file, buffer: string, len: string.strlen())
+
 # get_size:                  jmp [0x00000D24]
 # create:                    jmp [0x00000D28]
 # delete:                    jmp [0x00000D2C]

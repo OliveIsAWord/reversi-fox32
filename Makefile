@@ -5,7 +5,7 @@ OLEAC := olea
 FOX32ASM := fox32asm
 RYFS := ryfs
 
-SOURCE = main.olea
+SOURCE = main.olea std.olea fox32.def.olea
 
 main.img: main.fxf
 	$(RYFS) create -l "Reversi" $@
@@ -17,12 +17,16 @@ main.fxf: entry.asm binding_addresses.asm fox32.def.asm main.asm
 binding_addresses.asm: fox32.def.olea
 	./gen_bindings.rs
 
-fox32.def.asm: fox32.def.olea
+fox32.def.asm: main.dump
 	$(OLEAC) $< --binding=fox32 > fox32.def.asm
 
-main.asm: $(SOURCE) fox32.def.olea
-	cat $^ > main.dump
-	$(OLEAC) main.dump > $@
+# we have #include at home
+# concatenate all source files, using awk so they're separated by newlines
+main.dump: $(SOURCE)
+	awk '{print $0}' $^ > $@
+
+main.asm: main.dump
+	$(OLEAC) $< > $@
 
 clean:
 	rm -f binding_addresses.asm fox32.def.asm main.asm main.dump main.fxf main.img

@@ -1,5 +1,5 @@
     opton
-    push end_current_task
+    push [END_CURRENT_TASK]
     jmp main
 
 #include "main.asm"

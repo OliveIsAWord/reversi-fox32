@@ -1,2 +1,15 @@
-fn main():
-    0
+fn main(stream: File^mut):
+    stream.write("Hello, meowers!\n")
+    let mut window = (null() as Window^)^
+    let window = window@mut
+    window.new_window(
+        title: "Reversi"
+        width: 300_u16
+        height: 200_u16
+        x: 100_u16
+        y: 50_u16
+        menu_bar: null()
+        widgets: null()
+    )
+    while true:
+        yield_task()
