@@ -1,3 +1,5 @@
+extern fn millis() usize
+
 const STONE_EMPTY = 0xAA_u8
 const STONE_WHITE = 0x42_u8
 const STONE_BLACK = 0x69_u8
@@ -49,10 +51,26 @@ fn new_app(window: Window^mut) App:
         draw_vertical_line_to_overlay(x: i, y: 16, height: WINDOW_HEIGHT, color: edge_color, :overlay)
         draw_horizontal_line_to_overlay(x: 0, y: i + 16, width: WINDOW_WIDTH, color: edge_color, :overlay)
         i = i + 32
-    draw_circle_to_overlay(x: 32 * 4 - 17, y: 32 * 4 - 1, radius: 13, color: white_color, :overlay)
-    draw_circle_to_overlay(x: 32 * 5 - 17, y: 32 * 4 - 1, radius: 13, color: black_color, :overlay)
-    draw_circle_to_overlay(x: 32 * 4 - 17, y: 32 * 5 - 1, radius: 13, color: black_color, :overlay)
-    draw_circle_to_overlay(x: 32 * 5 - 17, y: 32 * 5 - 1, radius: 13, color: white_color, :overlay)
+    let start = millis()
+    let mut xi = 0
+    while xi < 8:
+        defer xi = xi + 1
+        let mut yi = 0
+        while yi < 8:
+            defer yi = yi + 1
+            let mut color = white_color
+            if random_range(min: 0, max: 2) == 0:
+                 color = black_color
+            draw_circle_to_overlay(x: 32 * xi + 15, y: 32 * yi + 31, radius: 13, :color, :overlay)
+    let end = millis()
+    draw_decimal_to_overlay(
+        value: end - start
+        x: 42
+        y: 69
+        foreground_color: 0xffff_ffff_u32
+        background_color: 0xff00_0000_u32
+        :overlay
+    )
     let board = allocate_memory(64) as u8[^]mut
     App(:window, :board)
 

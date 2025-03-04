@@ -66,7 +66,10 @@ extern fn caps_pressed()
 # fill_overlay:                             jmp [0xF0043000]
 # draw_str_to_overlay:                      jmp [0xF0043004]
 # draw_format_str_to_overlay:               jmp [0xF0043008]
-# draw_decimal_to_overlay:                  jmp [0xF004300C]
+
+## 0xF004300C
+extern fn draw_decimal_to_overlay(value: usize, x: usize, y: usize, foreground_color: u32, background_color: u32, overlay: u8)
+
 # draw_hex_to_overlay:                      jmp [0xF0043010]
 # draw_font_tile_to_overlay:                jmp [0xF0043014]
 # draw_tile_to_overlay:                     jmp [0xF0043018]
@@ -140,7 +143,11 @@ extern fn string_length(anon string: u8[^]) usize
 # 
 # ; random number jump table
 # random:                                   jmp [0xF0049000]
-# random_range:                             jmp [0xF0049004]
+
+## 0xF0049004
+extern fn fox32rom_random_range(_, _unused: usize, min: usize, max: usize) usize
+fn random_range(_, min: usize, max: usize) usize:
+    fox32rom_random_range(_unused: 0, :min, :max)
 
 # Event types
 
