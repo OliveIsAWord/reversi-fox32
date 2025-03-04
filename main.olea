@@ -1,8 +1,8 @@
 extern fn millis() usize
 
-const STONE_EMPTY = 0xAA_u8
-const STONE_WHITE = 0x42_u8
-const STONE_BLACK = 0x69_u8
+const STONE_EMPTY = 0b00_u8
+const STONE_BLACK = 0b10_u8
+const STONE_WHITE = 0b11_u8
 
 const WINDOW_WIDTH = 255
 const WINDOW_HEIGHT = 255
@@ -37,32 +37,83 @@ fn draw_circle_to_overlay(x: usize, y: usize, radius: usize, color: Color, overl
 
 struct App:
     window: Window^mut
-    board: u8[^]mut
+    # Each row of the board is a `u16` conceptually split into eight 2-bit chunks.
+    # 00 - Empty
+    # 10 - Black
+    # 11 - White
+    board: u16[8]
 
 fn new_app(window: Window^mut) App:
+    let mut board = (null() as u16[8]^)^
+    let mut i = 0
+    while i < 8:
+        defer i = i + 1
+        board@mut[i] = 0_u16
+    let mut app = App(:window, :board)
+    app@mut.set_stone(x: 3_u8, y: 3_u8, stone: STONE_WHITE)
+    app@mut.set_stone(x: 4_u8, y: 3_u8, stone: STONE_BLACK)
+    app@mut.set_stone(x: 3_u8, y: 4_u8, stone: STONE_BLACK)
+    app@mut.set_stone(x: 4_u8, y: 4_u8, stone: STONE_WHITE)
+    app@.display_app()
+    app
+
+fn get_stone(app: App^, x: u8, y: u8) u8:
+    assert(x < 8_u8, "x out of bounds")
+    assert(y < 8_u8, "y out of bounds")
+    let stone = (self^.board@[y as usize] >> (x as u16 * 2_u16)) as u8 & 3_u8
+    assert(
+        stone == STONE_EMPTY
+            or stone == STONE_BLACK
+            or stone == STONE_WHITE
+        "corrupted stone"
+    )
+    stone
+
+fn set_stone(app: App^mut, x: u8, y: u8, stone: u8):
+    assert(x < 8_u8, "x out of bounds")
+    assert(y < 8_u8, "y out of bounds")
+    assert(
+        stone == STONE_EMPTY
+            or stone == STONE_BLACK
+            or stone == STONE_WHITE
+        "corrupted stone"
+    )
+    let row = self^.board@mut[y as usize]@mut
+    let x = (x * 2_u8) as u16
+    row^ = row^ & (0xFFFF_u16 - 0b11_u16 << x) | stone as u16 << x
+
+fn display_app(anon app: App^):
     let background_color = color(0x6688aa)
     let edge_color = color(0x334466)
     let white_color = color(0xffeebb)
     let black_color = color(0x222233)
-    window.fill_window(background_color)
-    let overlay = window^.overlay
+    self^.window.fill_window(background_color)
+    let overlay = self^.window^.overlay
     let mut i = 31
     while i < WINDOW_WIDTH:
         draw_vertical_line_to_overlay(x: i, y: 16, height: WINDOW_HEIGHT, color: edge_color, :overlay)
         draw_horizontal_line_to_overlay(x: 0, y: i + 16, width: WINDOW_WIDTH, color: edge_color, :overlay)
         i = i + 32
     let start = millis()
-    let mut xi = 0
-    while xi < 8:
-        defer xi = xi + 1
-        let mut yi = 0
-        while yi < 8:
-            defer yi = yi + 1
-            let color = if random_range(min: 0, max: 2) == 0:
-                white_color
-            else:
-                black_color
-            draw_circle_to_overlay(x: 32 * xi + 15, y: 32 * yi + 31, radius: 13, :color, :overlay)
+    let mut x = 0_u8
+    while x < 8_u8:
+        defer x = x + 1_u8
+        let mut y = 0_u8
+        while y < 8_u8:
+            defer y = y + 1_u8
+            let stone = .get_stone(:x, :y)
+            if stone != STONE_EMPTY:
+                let color = if stone == STONE_WHITE:
+                    white_color
+                else:
+                    black_color
+                draw_circle_to_overlay(
+                    x: 32 * x as usize + 15
+                    y: 32 * y as usize + 31
+                    radius: 13
+                    :color
+                    :overlay
+                )
     let end = millis()
     draw_decimal_to_overlay(
         value: end - start
@@ -72,14 +123,11 @@ fn new_app(window: Window^mut) App:
         background_color: 0xff00_0000_u32
         :overlay
     )
-    let board = allocate_memory(64) as u8[^]mut
-    App(:window, :board)
 
 fn handle_mouse_click(anon _: App^mut, x: usize, y: usize):
     0
 
-fn close_app(anon _: App^mut):
-    free_memory(self^.board as void^mut)
+fn close_app(anon _: App^mut): 0
 
 fn main():
     let mut window = (null() as Window^)^

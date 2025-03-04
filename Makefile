@@ -11,7 +11,7 @@ main.img: main.fxf
 	$(RYFS) add $@ $<
 
 main.fxf: entry.asm binding_addresses.asm fox32.def.asm main.asm
-	$(FOX32ASM) $< $@
+	$(FOX32ASM) $< $@ > /dev/null
 
 binding_addresses.asm: main.dump
 	./gen_bindings.rs $< > $@

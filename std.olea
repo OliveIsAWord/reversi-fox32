@@ -4,3 +4,9 @@ struct void
 
 fn null() void^mut:
     (0@mut as void^mut^)^
+
+fn assert(anon condition: bool, anon msg: u8[^]):
+    if condition:
+        0
+    else:
+        panic(msg)
