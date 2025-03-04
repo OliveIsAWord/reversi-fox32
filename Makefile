@@ -5,7 +5,7 @@ OLEAC := olea
 FOX32ASM := fox32asm
 RYFS := ryfs
 
-SOURCE = main.olea std.olea fox32.def.olea
+SOURCE = main.olea std.olea fox32os.def.olea fox32rom.def.olea
 
 main.img: main.fxf
 	$(RYFS) create -l "Reversi" $@
@@ -14,8 +14,8 @@ main.img: main.fxf
 main.fxf: entry.asm binding_addresses.asm fox32.def.asm main.asm
 	$(FOX32ASM) $< $@
 
-binding_addresses.asm: fox32.def.olea
-	./gen_bindings.rs
+binding_addresses.asm: main.dump
+	./gen_bindings.rs $< > $@
 
 fox32.def.asm: main.dump
 	$(OLEAC) $< --binding=fox32 > fox32.def.asm
