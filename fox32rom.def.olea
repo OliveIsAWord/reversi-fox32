@@ -4,6 +4,12 @@ struct Color:
     b: u8
     a: u8
 
+fn color_to_u32(anon color: Color) u32:
+    color.r as u32 +
+         color.g as u32 * 0x100_u32 +
+         color.b as u32 * 0x10000_u32 +
+         color.a as u32 * 0x1000000_u32
+
 # fox32rom routine definitions
 
 # ; system jump table
@@ -64,8 +70,17 @@ extern fn caps_pressed()
 # draw_hex_to_overlay:                      jmp [0xF0043010]
 # draw_font_tile_to_overlay:                jmp [0xF0043014]
 # draw_tile_to_overlay:                     jmp [0xF0043018]
-# draw_pixel_to_overlay:                    jmp [0xF004301C]
-# draw_filled_rectangle_to_overlay:         jmp [0xF0043020]
+
+## 0xF004301C
+extern fn fox32rom_draw_pixel_to_overlay(_, x: usize, y: usize, color: u32, overlay: u8)
+fn draw_pixel_to_overlay(_, x: usize, y: usize, color: Color, overlay: u8):
+    fox32rom_draw_pixel_to_overlay(:x, :y, :overlay, color: color_to_u32(color))
+    
+## 0xF0043020
+extern fn fox32rom_draw_filled_rectangle_to_overlay(_, x: usize, y: usize, width: usize, height: usize, color: u32, overlay: u8)
+fn draw_filled_rectangle_to_overlay(_, x: usize, y: usize, width: usize, height: usize, color: Color, overlay: u8):
+    fox32rom_draw_filled_rectangle_to_overlay(:x, :y, :width, :height, :overlay, color: color_to_u32(color))
+
 # check_if_overlay_covers_position:         jmp [0xF0043024]
 # check_if_enabled_overlay_covers_position: jmp [0xF0043028]
 # enable_overlay:                           jmp [0xF004302C]

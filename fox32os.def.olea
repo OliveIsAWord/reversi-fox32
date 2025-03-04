@@ -35,13 +35,18 @@ extern fn end_current_task()
 
 # sleep_task:                jmp [0x00000A2C]
 # get_task_queue:            jmp [0x00000A30]
-#
-# ; memory jump table
-# allocate_memory:           jmp [0x00000B10]
-# free_memory:               jmp [0x00000B14]
+
+# memory jump table
+
+## 0x00000B10
+extern fn allocate_memory(anon size: usize) void^mut
+
+## 0x00000B14
+extern fn free_memory(anon pointer: void^mut)
+
 # heap_usage:                jmp [0x00000B18]
-#
-# ; window jump table
+
+# window jump table
 
 struct Window:
     frame_buffer: Color[^]mut
@@ -86,7 +91,11 @@ extern fn get_next_window_event(anon window: Window^mut) Event
 
 # draw_title_bar_to_window:  jmp [0x00000C20]
 # move_window:               jmp [0x00000C24]
-# fill_window:               jmp [0x00000C28]
+
+## 0x00000C28
+extern fn fox32os_fill_window(_, color: u32, window: Window^mut)
+fn fill_window(anon window: Window^mut, anon color: Color):
+    fox32os_fill_window(:window, color: color_to_u32(color))
 
 ## 0x00000C2C
 extern fn get_window_overlay_number(anon window: Window^)

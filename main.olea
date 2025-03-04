@@ -1,16 +1,85 @@
+const STONE_EMPTY = 0xAA_u8
+const STONE_WHITE = 0x42_u8
+const STONE_BLACK = 0x69_u8
+
+const WINDOW_WIDTH = 255
+const WINDOW_HEIGHT = 255
+
+fn color(anon bytes: usize) Color:
+    let r = (bytes / 0x10000) as u8
+    let g = (bytes / 0x100) as u8
+    let b = bytes as u8
+    Color(:r, :g, :b, a: 0xff_u8)
+
+fn draw_vertical_line_to_overlay(x: usize, y: usize, height: usize, color: Color, overlay: u8):
+    draw_filled_rectangle_to_overlay(:x, :y, width: 1, :height, :color, :overlay)
+    
+fn draw_horizontal_line_to_overlay(x: usize, y: usize, width: usize, color: Color, overlay: u8):
+    draw_filled_rectangle_to_overlay(:x, :y, :width, height: 1, :color, :overlay)
+
+# x and y are the center of the circle
+fn draw_circle_to_overlay(x: usize, y: usize, radius: usize, color: Color, overlay: u8):
+    # argh, suddenly mutable function parameters would be nice
+    let mut x1 = x - radius
+    while x1 <= x + radius:
+        defer x1 = x1 + 1
+        let mut y1 = y - radius
+        while y1 <= y + radius:
+            defer y1 = y1 + 1
+            let x_center = x - x1
+            let y_center = y - y1
+            # using `<` instead of `<=` here makes more visually appealing circles, i think
+            if x_center * x_center + y_center * y_center < radius * radius:
+                draw_pixel_to_overlay(x: x1, y: y1, :color, :overlay)
+
+struct App:
+    window: Window^mut
+    board: u8[^]mut
+
+fn new_app(window: Window^mut) App:
+    # https://lospec.com/palette-list/twilight-5
+    let background_color = color(0x6688aa)
+    let edge_color = color(0x334466)
+    let white_color = color(0xffddaa)
+    let black_color = color(0x222233)
+    window.fill_window(background_color)
+    let overlay = window^.overlay
+    let mut i = 31
+    while i < WINDOW_WIDTH:
+        draw_vertical_line_to_overlay(x: i, y: 16, height: WINDOW_HEIGHT, color: edge_color, :overlay)
+        draw_horizontal_line_to_overlay(x: 0, y: i + 16, width: WINDOW_WIDTH, color: edge_color, :overlay)
+        i = i + 32
+    draw_circle_to_overlay(x: 32 * 4 - 17, y: 32 * 4 - 1, radius: 13, color: white_color, :overlay)
+    draw_circle_to_overlay(x: 32 * 5 - 17, y: 32 * 4 - 1, radius: 13, color: black_color, :overlay)
+    draw_circle_to_overlay(x: 32 * 4 - 17, y: 32 * 5 - 1, radius: 13, color: black_color, :overlay)
+    draw_circle_to_overlay(x: 32 * 5 - 17, y: 32 * 5 - 1, radius: 13, color: white_color, :overlay)
+    let board = allocate_memory(64) as u8[^]mut
+    App(:window, :board)
+
+fn handle_mouse_click(anon _: App^mut, x: usize, y: usize):
+    0
+
+fn close_app(anon _: App^mut):
+    free_memory(self^.board as void^mut)
+
 fn main():
     let mut window = (null() as Window^)^
     let window = window@mut
     window.new_window(
-        title: "Good Citizen"
-        width: 300_u16
-        height: 200_u16
+        title: "Reversi"
+        width: WINDOW_WIDTH as u16
+        height: WINDOW_HEIGHT as u16
         x: 100_u16
         y: 50_u16
         menu_bar: null()
         widgets: null()
     )
     defer window.destroy_window()
+
+    let mut app = new_app(:window)
+    let app = app@mut
+    defer app.close_app()
+
     let mut running = true
     while running:
         yield_task()
@@ -25,6 +94,8 @@ fn main():
                         running = false
                     else:
                         window.start_dragging_window()
+                else:
+                    app.handle_mouse_click(:x, :y)
             else if event.kind == EVENT_TYPE_KEY_DOWN:
                 let key = event.parameters@[0]
                 if key == KEY_LSHIFT or key == KEY_RSHIFT:
