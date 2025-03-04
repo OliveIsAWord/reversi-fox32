@@ -25,9 +25,8 @@ struct Color:
 # ; task jump table
 # new_task:                  jmp [0x00000A10]
 
-# save registers always with `save_state_and_yield_task`, just in case
-# ## 0x00000A14
-# extern fn yield_task()
+## 0x00000A14
+extern fn yield_task()
 
 ## 0x00000A18
 extern fn end_current_task()
@@ -36,9 +35,9 @@ extern fn end_current_task()
 # get_unused_task_id:        jmp [0x00000A20]
 # is_task_id_used:           jmp [0x00000A24]
 
-## 0x00000A28
-extern fn save_state_and_yield_task()
-fn yield_task(): save_state_and_yield_task()
+# Currently, we always save our registers, so this is pointless.
+# ## 0x00000A28
+# extern fn save_state_and_yield_task()
 
 # sleep_task:                jmp [0x00000A2C]
 # get_task_queue:            jmp [0x00000A30]
@@ -82,7 +81,10 @@ extern fn new_window(
     widgets: void^mut
 )
 
-# destroy_window:            jmp [0x00000C14]
+# Technically, this function could take a `Window^`, but for whatever reason I feel destructors should take their argument mutably.
+## 0x00000C14
+extern fn destroy_window(anon window: Window^mut)
+
 # new_window_event:          jmp [0x00000C18]
 
 ## 0x00000C1C
@@ -91,9 +93,24 @@ extern fn get_next_window_event(anon window: Window^mut) Event
 # draw_title_bar_to_window:  jmp [0x00000C20]
 # move_window:               jmp [0x00000C24]
 # fill_window:               jmp [0x00000C28]
-# get_window_overlay_number: jmp [0x00000C2C]
-# start_dragging_window:     jmp [0x00000C30]
-# new_messagebox:            jmp [0x00000C34]
+
+## 0x00000C2C
+extern fn get_window_overlay_number(anon window: Window^)
+
+## 0x00000C30
+extern fn start_dragging_window(anon window: Window^mut)
+
+## 0x00000C34
+extern fn new_messagebox(
+    _
+    line_1: u8[^]
+    line_2: u8[^]
+    line_3: u8[^]
+    x: u16
+    y: u16
+    width: u16
+)
+
 # get_active_window_struct:  jmp [0x00000C38]
 # set_window_flags:          jmp [0x00000C3C]
 # new_window_from_resource:  jmp [0x00000C40]
@@ -129,15 +146,18 @@ fn write(file: File^mut, anon string: u8[^]):
 # ; resource jump table
 # get_resource:              jmp [0x00000F10]
 # get_res_in_fxf:            jmp [0x00000F14]
-#
-# ; event types
-# const EVENT_TYPE_BUTTON_CLICK: 0x80000000
-#
-# ; widget types
-# const WIDGET_TYPE_BUTTON:     0x00000000
-# const WIDGET_TYPE_TEXTBOX_SL: 0x00000001
-# const WIDGET_TYPE_LABEL:      0x00000002
-#
-# ; window flags
-# const WINDOW_FLAG_ALWAYS_BACKGROUND: 1
-# const WINDOW_FLAG_NO_TITLE_BAR:      2
+
+# Event types
+
+const EVENT_TYPE_BUTTON_CLICK = 0x8000_0000
+
+# Widget types
+
+const WIDGET_TYPE_BUTTON = 0x0000_0000
+const WIDGET_TYPE_TEXTBOX_SL = 0x0000_0001
+const WIDGET_TYPE_LABEL = 0x0000_0002
+
+# Window flags
+
+const WINDOW_FLAG_ALWAYS_BACKGROUND = 1
+const WINDOW_FLAG_NO_TITLE_BAR = 2
