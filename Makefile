@@ -1,5 +1,4 @@
 .POSIX:
-.SUFFIXES: .olea .asm
 
 OLEAC := olea
 FOX32ASM := fox32asm

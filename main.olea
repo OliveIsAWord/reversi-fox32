@@ -1,9 +1,8 @@
-fn main(stream: File^mut):
-    stream.write("Hello, meowers!\n")
+fn main():
     let mut window = (null() as Window^)^
     let window = window@mut
     window.new_window(
-        title: "Reversi"
+        title: "Good Citizen"
         width: 300_u16
         height: 200_u16
         x: 100_u16
@@ -11,5 +10,28 @@ fn main(stream: File^mut):
         menu_bar: null()
         widgets: null()
     )
-    while true:
+    defer window.destroy_window()
+    let mut running = true
+    while running:
         yield_task()
+        let mut event = Event(kind: EVENT_TYPE_MOUSE_CLICK, parameters: (null() as usize[7]^)^)
+        while event.kind != EVENT_TYPE_EMPTY:
+            event = window.get_next_window_event()
+            if event.kind == EVENT_TYPE_MOUSE_CLICK:
+                let x = event.parameters@[0]
+                let y = event.parameters@[1]
+                if y < 16:
+                    if x < 8:
+                        running = false
+                    else:
+                        window.start_dragging_window()
+            else if event.kind == EVENT_TYPE_KEY_DOWN:
+                let key = event.parameters@[0]
+                if key == KEY_LSHIFT or key == KEY_RSHIFT:
+                    shift_pressed()
+                else if key == KEY_CAPS:
+                    caps_pressed()
+            else if event.kind == EVENT_TYPE_KEY_UP:
+                let key = event.parameters@[0]
+                if key == KEY_LSHIFT or key == KEY_RSHIFT:
+                    shift_released()
