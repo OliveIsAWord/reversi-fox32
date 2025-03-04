@@ -5,10 +5,10 @@ struct Color:
     a: u8
 
 fn color_to_u32(anon color: Color) u32:
-    color.r as u32 +
-         color.g as u32 * 0x100_u32 +
-         color.b as u32 * 0x10000_u32 +
-         color.a as u32 * 0x1000000_u32
+    color.r as u32
+         + color.g as u32 << 8_u32
+         + color.b as u32 << 16_u32
+         + color.a as u32 << 24_u32
 
 # fox32rom routine definitions
 

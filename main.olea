@@ -8,10 +8,12 @@ const WINDOW_WIDTH = 255
 const WINDOW_HEIGHT = 255
 
 fn color(anon bytes: usize) Color:
-    let r = (bytes / 0x10000) as u8
-    let g = (bytes / 0x100) as u8
-    let b = bytes as u8
-    Color(:r, :g, :b, a: 0xff_u8)
+    Color(
+        r: (bytes >> 16) as u8
+        g: (bytes >> 8) as u8
+        b: bytes as u8
+        a: 0xff_u8
+    )
 
 fn draw_vertical_line_to_overlay(x: usize, y: usize, height: usize, color: Color, overlay: u8):
     draw_filled_rectangle_to_overlay(:x, :y, width: 1, :height, :color, :overlay)
@@ -38,10 +40,9 @@ struct App:
     board: u8[^]mut
 
 fn new_app(window: Window^mut) App:
-    # https://lospec.com/palette-list/twilight-5
     let background_color = color(0x6688aa)
     let edge_color = color(0x334466)
-    let white_color = color(0xffddaa)
+    let white_color = color(0xffeebb)
     let black_color = color(0x222233)
     window.fill_window(background_color)
     let overlay = window^.overlay
