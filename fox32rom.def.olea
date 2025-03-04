@@ -114,7 +114,7 @@ extern fn caps_pressed()
 # compare_string:                           jmp [0xF0046014]
 
 ## 0xF0046018
-extern fn string_length(anon string: u8[^])
+extern fn string_length(anon string: u8[^]) usize
 
 # ; integer jump table
 # string_to_int:                            jmp [0xF0047000]

@@ -55,9 +55,9 @@ struct Window:
     overlay: u8
     reserved_1: u8
     flags: u16
-    menu_bar: void^
-    first_widget: void^
-    active_widget: void^
+    menu_bar: void^mut
+    first_widget: void^mut
+    active_widget: void^mut
 
 struct Event:
     kind: usize
@@ -122,7 +122,7 @@ struct File:
 ## 0x00000D20
 extern fn fox32os_write(_, len: usize, file: File^mut, buffer: u8[^])
 fn write(file: File^mut, anon string: u8[^]):
-    fox32os_write(:file, buffer: string, len: string.strlen())
+    fox32os_write(:file, buffer: string, len: string.string_length())
 
 # get_size:                  jmp [0x00000D24]
 # create:                    jmp [0x00000D28]

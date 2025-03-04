@@ -4,9 +4,3 @@ struct void
 
 fn null() void^mut:
     (0@mut as void^mut^)^
-
-fn strlen(string: u8[^]) usize:
-    let mut len = 0
-    while string[len] != 0_u8:
-        len = len + 1
-    len
