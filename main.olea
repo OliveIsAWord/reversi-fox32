@@ -21,7 +21,6 @@ fn draw_horizontal_line_to_overlay(x: usize, y: usize, width: usize, color: Colo
 
 # x and y are the center of the circle
 fn draw_circle_to_overlay(x: usize, y: usize, radius: usize, color: Color, overlay: u8):
-    # argh, suddenly mutable function parameters would be nice
     let mut x1 = x - radius
     while x1 <= x + radius:
         defer x1 = x1 + 1
@@ -58,9 +57,10 @@ fn new_app(window: Window^mut) App:
         let mut yi = 0
         while yi < 8:
             defer yi = yi + 1
-            let mut color = white_color
-            if random_range(min: 0, max: 2) == 0:
-                 color = black_color
+            let color = if random_range(min: 0, max: 2) == 0:
+                white_color
+            else:
+                black_color
             draw_circle_to_overlay(x: 32 * xi + 15, y: 32 * yi + 31, radius: 13, :color, :overlay)
     let end = millis()
     draw_decimal_to_overlay(
