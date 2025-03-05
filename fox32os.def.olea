@@ -33,7 +33,9 @@ extern fn end_current_task()
 # ## 0x00000A28
 # extern fn save_state_and_yield_task()
 
-# sleep_task:                jmp [0x00000A2C]
+## 0x00000A2C
+extern fn sleep_task(millis: usize)
+
 # get_task_queue:            jmp [0x00000A30]
 
 # memory jump table

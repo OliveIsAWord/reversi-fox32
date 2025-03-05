@@ -47,6 +47,7 @@ struct App:
     board: u16[8]
     # false - black to move, true - white to move
     turn: bool
+    preview_radius: usize
 
 fn new_app(window: Window^mut) App:
     let mut board = (null() as u16[8]^)^
@@ -54,7 +55,7 @@ fn new_app(window: Window^mut) App:
     while i < 8:
         defer i = i + 1
         board@mut[i] = 0_u16
-    let mut app = App(:window, :board, turn: false)
+    let mut app = App(:window, :board, turn: false, preview_radius: 2)
     init_app(app@mut)
     app
 
@@ -204,6 +205,22 @@ fn clear_display(anon _: App^):
     #     :overlay
     # )
 
+fn reset_preview_radius(anon _: App^mut, anon new_radius: usize):
+    defer self^.preview_radius = new_radius
+    let old_radius = self^.preview_radius
+    let mut x = 0_u8
+    while x < 8_u8:
+        defer x = x + 1_u8
+        let mut y = 0_u8
+        while y < 8_u8:
+            defer y = y + 1_u8
+            if self^@.get_stone(:x, :y) == STONE_PLACE:
+                if old_radius > new_radius:
+                    .redraw_stone(:x, :y, old_stone: STONE_PLACE, stone: STONE_EMPTY)
+                self^.preview_radius = new_radius
+                .redraw_stone(:x, :y, old_stone: STONE_EMPTY, stone: STONE_PLACE)
+                self^.preview_radius = old_radius
+
 fn redraw_stone(anon _: App^mut, x: u8, y: u8, old_stone: u8, stone: u8):
     let overlay = self^.window^.overlay
     let x = 32 * x as usize + 15
@@ -214,14 +231,14 @@ fn redraw_stone(anon _: App^mut, x: u8, y: u8, old_stone: u8, stone: u8):
     else if stone == STONE_BLACK:
         color(COLOR_BLACK)
     else if stone == STONE_PLACE:
-        radius = 2
+        radius = self^.preview_radius
         if self^.turn:
             color(COLOR_WHITE)
         else:
             color(COLOR_BLACK)
     else if stone == STONE_EMPTY:
         if old_stone == STONE_PLACE:
-            radius = 2
+            radius = self^.preview_radius
         color(COLOR_BACKGROUND)
     else:
         panic("unknown stone to draw")
@@ -261,6 +278,8 @@ fn end_game(anon _: App^mut):
     )
 
 fn handle_mouse_click(anon _: App^mut, x: usize, y: usize):
+    # teehee
+    defer .reset_preview_radius(random_range(min: 0, max: 17))
     let x = (x / 32) as u8
     let y = (y / 32) as u8
     if self^@.get_stone(:x, :y) == STONE_PLACE:
