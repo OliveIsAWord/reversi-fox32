@@ -63,7 +63,8 @@ fn init_app(anon _: App^mut):
     .set_stone(x: 4_u8, y: 3_u8, stone: STONE_BLACK)
     .set_stone(x: 3_u8, y: 4_u8, stone: STONE_BLACK)
     .set_stone(x: 4_u8, y: 4_u8, stone: STONE_WHITE)
-    .calculate_moves()
+    let initial_moves = .calculate_moves()
+    assert(initial_moves == 4, "inital moves")
     self^@.clear_display()
     self^@.display_app()
 
@@ -82,7 +83,16 @@ fn set_stone(anon _: App^mut, x: u8, y: u8, stone: u8):
     let x = (x * 2_u8) as u16
     row^ = row^ & (0xFFFF_u16 - 0b11_u16 << x) | stone as u16 << x
 
-fn calculate_moves(anon _: App^mut):
+# wow we need a `not` operator lmao
+fn switch_turn(anon _: App^mut):
+    self^.turn = if self^.turn:
+        false
+    else:
+        true
+
+# returns the number of valid moves the current player has
+fn calculate_moves(anon _: App^mut) usize:
+    let mut num_valid_moves = 0
     let mut x = 0_u8
     while x < 8_u8:
         defer x = x + 1_u8
@@ -99,6 +109,9 @@ fn calculate_moves(anon _: App^mut):
                 .calculate_moves0(:x, :y, dx: -1_u8, dy: 1_u8)
                 .calculate_moves0(:x, :y, dx: 0_u8, dy: 1_u8)
                 .calculate_moves0(:x, :y, dx: 1_u8, dy: 1_u8)
+                if self^@.get_stone(:x, :y) == STONE_PLACE:
+                    num_valid_moves = num_valid_moves + 1
+    num_valid_moves
 
 fn calculate_moves0(anon _: App^mut, x: u8, y: u8, dx: u8, dy: u8):
     let enemy_stone = if self^.turn:
@@ -121,10 +134,7 @@ fn calculate_moves0(anon _: App^mut, x: u8, y: u8, dx: u8, dy: u8):
         .set_stone(:x, :y, stone: STONE_PLACE)
 
 fn make_move(anon _: App^mut, x: u8, y: u8):
-    defer self^.turn = if self^.turn:
-        false
-    else:
-        true
+    defer .switch_turn()
     let stone = if self^.turn:
         STONE_WHITE
     else:
@@ -222,7 +232,12 @@ fn handle_mouse_click(anon _: App^mut, x: usize, y: usize):
     let y = (y / 32) as u8
     if self^@.get_stone(:x, :y) == STONE_PLACE:
         .make_move(:x, :y)
-        .calculate_moves()
+        if .calculate_moves() == 0:
+            .switch_turn()
+            if .calculate_moves() == 0:
+                self^@.display_app()
+                while true:
+                    yield_task()
         self^@.display_app()
 
 fn close_app(anon _: App^mut): 0
