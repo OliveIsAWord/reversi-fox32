@@ -53,7 +53,7 @@ struct App:
     turn: bool
     preview_radius: usize
 
-fn new_app(window: Window^mut) App:
+fn new_app(window: Window^mut, preview_radius: usize) App:
     let mut board = (null() as u16[8]^)^
     let mut i = 0
     while i < 8:
@@ -63,7 +63,7 @@ fn new_app(window: Window^mut) App:
         :window
         :board
         turn: false
-        preview_radius: PREVIEW_RADIUS_DEFAULT
+        :preview_radius
     )
     init_app(app@mut)
     app
@@ -315,7 +315,7 @@ fn handle_menu_click(anon _: App^mut, anon menu_item: MenuItem):
     if menu == 0:
         # New Game
         if item == 0:
-            self^ = new_app(:self^.window)
+            self^ = new_app(:self^.window, :self^.preview_radius)
         else:
             q.p()
     # Board
@@ -348,7 +348,7 @@ fn main(_: File^mut):
     )
     defer window.destroy_window()
 
-    let mut app = new_app(:window)
+    let mut app = new_app(:window, preview_radius: PREVIEW_RADIUS_DEFAULT)
     let app = app@mut
     defer app.close_app()
 
