@@ -29,12 +29,12 @@ fn draw_horizontal_line_to_overlay(x: usize, y: usize, width: usize, color: Colo
 
 # x and y are the center of the circle
 fn draw_circle_to_overlay(x: usize, y: usize, radius: usize, color: Color, overlay: u8):
-    let mut x1 = x - radius
-    while x1 <= x + radius:
-        defer x1 = x1 + 1
-        let mut y1 = y - radius
-        while y1 <= y + radius:
-            defer y1 = y1 + 1
+    let mut y1 = y - radius
+    while y1 <= y + radius:
+        defer y1 = y1 + 1
+        let mut x1 = x - radius
+        while x1 <= x + radius:
+            defer x1 = x1 + 1
             let x_center = x - x1
             let y_center = y - y1
             # using `<` instead of `<=` here makes more visually appealing circles, i think
@@ -55,13 +55,17 @@ fn new_app(window: Window^mut) App:
         defer i = i + 1
         board@mut[i] = 0_u16
     let mut app = App(:window, :board, turn: false)
-    app@mut.set_stone(x: 3_u8, y: 3_u8, stone: STONE_WHITE)
-    app@mut.set_stone(x: 4_u8, y: 3_u8, stone: STONE_BLACK)
-    app@mut.set_stone(x: 3_u8, y: 4_u8, stone: STONE_BLACK)
-    app@mut.set_stone(x: 4_u8, y: 4_u8, stone: STONE_WHITE)
-    app@.clear_display()
-    app@.display_app()
+    init_app(app@mut)
     app
+
+fn init_app(anon _: App^mut):
+    .set_stone(x: 3_u8, y: 3_u8, stone: STONE_WHITE)
+    .set_stone(x: 4_u8, y: 3_u8, stone: STONE_BLACK)
+    .set_stone(x: 3_u8, y: 4_u8, stone: STONE_BLACK)
+    .set_stone(x: 4_u8, y: 4_u8, stone: STONE_WHITE)
+    .calculate_moves()
+    self^@.clear_display()
+    self^@.display_app()
 
 fn get_stone(anon _: App^, x: u8, y: u8) u8:
     assert(x < 8_u8, "x out of bounds")
@@ -77,6 +81,9 @@ fn set_stone(anon _: App^mut, x: u8, y: u8, stone: u8):
     let row = self^.board@mut[y as usize]@mut
     let x = (x * 2_u8) as u16
     row^ = row^ & (0xFFFF_u16 - 0b11_u16 << x) | stone as u16 << x
+
+fn calculate_moves(anon _: App^mut):
+    0
 
 fn clear_display(anon _: App^):
     let background_color = color(COLOR_BACKGROUND)
@@ -101,9 +108,11 @@ fn display_app(anon _: App^):
         while y < 8_u8:
             defer y = y + 1_u8
             let stone = .get_stone(:x, :y)
-            if stone & 2_u8 != 0_u8:
+            if stone != STONE_EMPTY:
                 let color = if stone == STONE_WHITE:
                     white_color
+                else if stone == STONE_MOVE:
+                    color(0xff00ff)
                 else:
                     black_color
                 draw_circle_to_overlay(
