@@ -59,14 +59,13 @@ fn new_app(window: Window^mut) App:
     app
 
 fn init_app(anon _: App^mut):
+    self^@.clear_display()
     .set_stone(x: 3_u8, y: 3_u8, stone: STONE_WHITE)
     .set_stone(x: 4_u8, y: 3_u8, stone: STONE_BLACK)
     .set_stone(x: 3_u8, y: 4_u8, stone: STONE_BLACK)
     .set_stone(x: 4_u8, y: 4_u8, stone: STONE_WHITE)
     let initial_moves = .calculate_moves()
     assert(initial_moves == 4, "inital moves")
-    self^@.clear_display()
-    self^@.display_app()
 
 fn get_stone(anon _: App^, x: u8, y: u8) u8:
     assert(x < 8_u8, "x out of bounds")
@@ -79,6 +78,13 @@ fn set_stone(anon _: App^mut, x: u8, y: u8, stone: u8):
     assert(x < 8_u8, "x out of bounds")
     assert(y < 8_u8, "y out of bounds")
     assert(stone <= 3_u8, "corrupted stone")
+
+    # redraw stone if neecssary
+    let old_stone = self^@.get_stone(:x, :y)
+    if old_stone != stone:
+        .redraw_stone(:x, :y, :old_stone, :stone)
+
+    # set the stone in the board state
     let row = self^.board@mut[y as usize]@mut
     let x = (x * 2_u8) as u16
     row^ = row^ & (0xFFFF_u16 - 0b11_u16 << x) | stone as u16 << x
@@ -188,34 +194,6 @@ fn clear_display(anon _: App^):
         draw_horizontal_line_to_overlay(x: 0, y: i + 16, width: WINDOW_WIDTH, color: edge_color, :overlay)
         i = i + 32
 
-fn display_app(anon _: App^):
-    let background_color = color(COLOR_BACKGROUND)
-    let black_color = color(COLOR_BLACK)
-    let white_color = color(COLOR_WHITE)
-    # let start = millis()
-    let mut y = 0_u8
-    while y < 8_u8:
-        defer y = y + 1_u8
-        let mut x = 0_u8
-        while x < 8_u8:
-            defer x = x + 1_u8
-            let stone = .get_stone(:x, :y)
-            let color = if stone == STONE_WHITE:
-                 white_color
-            else if stone == STONE_BLACK:
-                black_color
-            else if stone == STONE_PLACE:
-                color(0xff00ff)
-            else:
-                background_color
-            draw_circle_to_overlay(
-                x: 32 * x as usize + 15
-                y: 32 * y as usize + 31
-                radius: 13
-                :color
-                :self^.window^.overlay
-            )
-            yield_task()
     # let end = millis()
     # draw_decimal_to_overlay(
     #     value: end - start
@@ -225,6 +203,36 @@ fn display_app(anon _: App^):
     #     background_color: 0xff00_0000_u32
     #     :overlay
     # )
+
+fn redraw_stone(anon _: App^mut, x: u8, y: u8, old_stone: u8, stone: u8):
+    let overlay = self^.window^.overlay
+    let x = 32 * x as usize + 15
+    let y = 32 * y as usize + 31
+    let mut radius = 13
+    let color = if stone == STONE_WHITE:
+        color(COLOR_WHITE)
+    else if stone == STONE_BLACK:
+        color(COLOR_BLACK)
+    else if stone == STONE_PLACE:
+        radius = 2
+        if self^.turn:
+            color(COLOR_WHITE)
+        else:
+            color(COLOR_BLACK)
+    else if stone == STONE_EMPTY:
+        if old_stone == STONE_PLACE:
+            radius = 2
+        color(COLOR_BACKGROUND)
+    else:
+        panic("unknown stone to draw")
+        color(0)
+    draw_circle_to_overlay(
+        :x
+        :y
+        :radius
+        :color
+        :overlay
+    )
 
 fn end_game(anon _: App^mut):
     let mut score = 0 # negative means black wins
@@ -258,7 +266,6 @@ fn handle_mouse_click(anon _: App^mut, x: usize, y: usize):
     if self^@.get_stone(:x, :y) == STONE_PLACE:
         .make_move(:x, :y)
         let num_moves = .calculate_moves()
-        self^@.display_app()
         if num_moves == 0:
             .switch_turn()
             if .calculate_moves() == 0:
