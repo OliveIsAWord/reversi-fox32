@@ -120,6 +120,53 @@ fn calculate_moves0(anon _: App^mut, x: u8, y: u8, dx: u8, dy: u8):
         and self^@.get_stone(x: nx, y: ny) & 2_u8 != 0_u8:
         .set_stone(:x, :y, stone: STONE_PLACE)
 
+fn make_move(anon _: App^mut, x: u8, y: u8):
+    defer self^.turn = if self^.turn:
+        false
+    else:
+        true
+    let stone = if self^.turn:
+        STONE_WHITE
+    else:
+        STONE_BLACK
+    .set_stone(:x, :y, :stone)
+    .make_move0(:x, :y, dx: 1_u8, dy: 0_u8)
+    .make_move0(:x, :y, dx: 1_u8, dy: -1_u8)
+    .make_move0(:x, :y, dx: 0_u8, dy: -1_u8)
+    .make_move0(:x, :y, dx: -1_u8, dy: -1_u8)
+    .make_move0(:x, :y, dx: -1_u8, dy: 0_u8)
+    .make_move0(:x, :y, dx: -1_u8, dy: 1_u8)
+    .make_move0(:x, :y, dx: 0_u8, dy: 1_u8)
+    .make_move0(:x, :y, dx: 1_u8, dy: 1_u8)
+
+fn make_move0(anon _: App^mut, x: u8, y: u8, dx: u8, dy: u8):
+    let stone = if self^.turn:
+        STONE_WHITE
+    else:
+        STONE_BLACK
+
+    let enemy_stone = if self^.turn:
+        STONE_BLACK
+    else:
+        STONE_WHITE
+    let mut nx = x + dx
+    let mut ny = y + dy
+    while 0_u8 <= nx < 8_u8
+        and 0_u8 <= ny < 8_u8
+        and self^@.get_stone(x: nx, y: ny) == enemy_stone:
+        nx = nx + dx
+        ny = ny + dy
+    if 0_u8 <= nx < 8_u8
+        and 0_u8 <= ny < 8_u8
+        and self^@.get_stone(x: nx, y: ny) == stone:
+        nx = nx - dx
+        ny = ny - dy
+        while self^@.get_stone(x: nx, y: ny) == enemy_stone:
+            defer:
+                nx = nx - dx
+                ny = ny - dy
+            .set_stone(x: nx, y: ny, :stone)
+
 fn clear_display(anon _: App^):
     let background_color = color(COLOR_BACKGROUND)
     let edge_color = color(COLOR_EDGE)
@@ -159,6 +206,7 @@ fn display_app(anon _: App^):
                 :color
                 :overlay
             )
+            yield_task()
     # let end = millis()
     # draw_decimal_to_overlay(
     #     value: end - start
@@ -173,13 +221,7 @@ fn handle_mouse_click(anon _: App^mut, x: usize, y: usize):
     let x = (x / 32) as u8
     let y = (y / 32) as u8
     if self^@.get_stone(:x, :y) == STONE_PLACE:
-        let stone = if self^.turn:
-            self^.turn = false
-            STONE_WHITE
-        else:
-            self^.turn = true
-            STONE_BLACK
-        .set_stone(:x, :y, :stone)
+        .make_move(:x, :y)
         .calculate_moves()
         self^@.display_app()
 
