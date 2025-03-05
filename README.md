@@ -2,6 +2,8 @@
 
 The staple computer game of classic Windows. Currently supports two-player play with plans to include an AI opponent.
 
+Get the latest current release [here](https://github.com/OliveIsAWord/reversi-fox32/releases/tag/v0.1.0).
+
 ![the game Reversi running on fox32os](screenshot.png)
 
 ## Building and Running
