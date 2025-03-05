@@ -62,7 +62,7 @@ struct Window:
     overlay: u8
     reserved_1: u8
     flags: u16
-    menu_bar: void^mut
+    menu_bar: void^
     first_widget: void^mut
     active_widget: void^mut
 
@@ -78,7 +78,7 @@ extern fn new_window(
     height: u16
     x: u16
     y: u16
-    menu_bar: void^mut
+    menu_bar: void^
     widgets: void^mut
 )
 

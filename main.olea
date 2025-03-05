@@ -1,5 +1,7 @@
 extern fn millis() usize
 
+extern fn get_reversi_menu() void^
+
 const STONE_PLACE  = 0b00_u8 # empty square, can place a stone here
 const STONE_EMPTY = 0b01_u8 # empty square, cannot place a stone here
 const STONE_BLACK = 0b10_u8 # square with a black stone
@@ -12,6 +14,8 @@ const COLOR_BACKGROUND = 0x6688aa
 const COLOR_EDGE = 0x334466
 const COLOR_BLACK = 0x222233
 const COLOR_WHITE = 0xffeebb
+
+const PREVIEW_RADIUS_DEFAULT = 2
 
 fn color(anon bytes: usize) Color:
     Color(
@@ -55,7 +59,12 @@ fn new_app(window: Window^mut) App:
     while i < 8:
         defer i = i + 1
         board@mut[i] = 0_u16
-    let mut app = App(:window, :board, turn: false, preview_radius: 2)
+    let mut app = App(
+        :window
+        :board
+        turn: false
+        preview_radius: PREVIEW_RADIUS_DEFAULT
+    )
     init_app(app@mut)
     app
 
@@ -278,8 +287,6 @@ fn end_game(anon _: App^mut):
     )
 
 fn handle_mouse_click(anon _: App^mut, x: usize, y: usize):
-    # teehee
-    defer .reset_preview_radius(random_range(min: 0, max: 17))
     let x = (x / 32) as u8
     let y = (y / 32) as u8
     if self^@.get_stone(:x, :y) == STONE_PLACE:
@@ -292,9 +299,42 @@ fn handle_mouse_click(anon _: App^mut, x: usize, y: usize):
             else:
                 self^.window^@.message_box_pass()
 
+struct MenuItem:
+    menu: usize
+    item: usize
+
+fn menu_item_panic(menu_item: MenuItem):
+    panic("unknown menu item")
+
+fn handle_menu_click(anon _: App^mut, anon menu_item: MenuItem):
+    let q = menu_item
+    let p = menu_item_panic
+    let menu = q.menu
+    let item = q.item
+    # Game
+    if menu == 0:
+        # New Game
+        if item == 0:
+            self^ = new_app(:self^.window)
+        else:
+            q.p()
+    # Board
+    else if menu == 1:
+        # Toggle Move Preview
+        if item == 0:
+            let new_radius = if self^.preview_radius != 0:
+                0
+            else:
+                PREVIEW_RADIUS_DEFAULT
+            .reset_preview_radius(new_radius)
+        else:
+            q.p()
+    else:
+        q.p()
+
 fn close_app(anon _: App^mut): 0
 
-fn main():
+fn main(_: File^mut):
     let mut window = (null() as Window^)^
     let window = window@mut
     window.new_window(
@@ -303,7 +343,7 @@ fn main():
         height: WINDOW_HEIGHT as u16
         x: (640 - WINDOW_WIDTH) as u16 / 2_u16
         y: (480 - WINDOW_HEIGHT) as u16 / 2_u16
-        menu_bar: null()
+        menu_bar: get_reversi_menu()
         widgets: null()
     )
     defer window.destroy_window()
@@ -318,7 +358,9 @@ fn main():
         let mut event = Event(kind: EVENT_TYPE_MOUSE_CLICK, parameters: (null() as usize[7]^)^)
         while event.kind != EVENT_TYPE_EMPTY:
             event = window.get_next_window_event()
-            if event.kind == EVENT_TYPE_MOUSE_CLICK:
+            if event.kind == EVENT_TYPE_EMPTY or event.kind == EVENT_TYPE_MOUSE_RELEASE:
+                0
+            else if event.kind == EVENT_TYPE_MOUSE_CLICK:
                 let x = event.parameters@[0]
                 let y = event.parameters@[1]
                 if y < 16:
@@ -338,6 +380,29 @@ fn main():
                 let key = event.parameters@[0]
                 if key == KEY_LSHIFT or key == KEY_RSHIFT:
                     shift_released()
+            else if event.kind == EVENT_TYPE_MENU_BAR_CLICK:
+                let x = event.parameters@[0]
+                let _y = event.parameters@[1]
+                menu_bar_click_event(:window^.menu_bar, :x)
+            else if event.kind == EVENT_TYPE_MENU_UPDATE:
+                let selected_menu_bar_item = event.parameters@[1]
+                let hovering_menu_item = event.parameters@[2]
+                menu_update_event(
+                    :window^.menu_bar
+                    :selected_menu_bar_item
+                    :hovering_menu_item
+                    _unused: 0
+                )
+            else if event.kind == EVENT_TYPE_MENU_CLICK:
+                let menu = event.parameters@[1]
+                let item = event.parameters@[2]
+                app.handle_menu_click(MenuItem(:menu, :item))
+            else if event.kind == EVENT_TYPE_MENU_ACK:
+                close_menu(:window^.menu_bar)
+            else:
+                .write("WARNING unknown event type=")
+                .write_usize(event.kind)
+                .write("\n")
 
 fn message_box_pass(anon window: Window^):
     .message_box(

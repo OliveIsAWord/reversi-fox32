@@ -97,13 +97,20 @@ fn draw_filled_rectangle_to_overlay(_, x: usize, y: usize, width: usize, height:
 # ; menu bar jump table
 # enable_menu_bar:                          jmp [0xF0044000]
 # disable_menu_bar:                         jmp [0xF0044004]
-# menu_bar_click_event:                     jmp [0xF0044008]
+
+## 0xF0044008
+extern fn menu_bar_click_event(_, menu_bar: void^, x: usize)
+
 # clear_menu_bar:                           jmp [0xF004400C]
 # draw_menu_bar_root_items:                 jmp [0xF0044010]
 # draw_menu_items:                          jmp [0xF0044014]
-# close_menu:                               jmp [0xF0044018]
-# menu_update_event:                        jmp [0xF004401C]
-# 
+
+## 0xF0044018
+extern fn close_menu(_, menu_bar: void^)
+
+## 0xF004401C
+extern fn menu_update_event(_, _unused: usize, menu_bar: void^, selected_menu_bar_item: usize, hovering_menu_item: usize)
+
 # ; disk jump table
 # read_sector:                              jmp [0xF0045000]
 # write_sector:                             jmp [0xF0045004]

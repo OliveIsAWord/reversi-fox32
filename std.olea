@@ -10,3 +10,25 @@ fn assert(anon condition: bool, anon msg: u8[^]):
         0
     else:
         panic(msg)
+
+fn write_usize(anon file: File^mut, anon i: usize):
+    let mut i = i
+    if i == 0:
+        .write("0")
+    else:
+        let mut which_digit = 1
+        if i >= 1_000_000_000:
+            which_digit = 1_000_000_000
+        else:
+            while which_digit <= i:
+                which_digit = which_digit * 10
+            which_digit = which_digit / 10
+        while which_digit > 0:
+            defer which_digit = which_digit / 10
+            let digit = (i / which_digit) as u8
+            i = i - digit as usize * which_digit
+            fox32os_write(
+                :file
+                buffer: (digit + 0x30u8)@ as u8[^]
+                len: 1
+            )

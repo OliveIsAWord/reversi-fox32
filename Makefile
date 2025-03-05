@@ -10,7 +10,7 @@ main.img: main.fxf
 	$(RYFS) create -l "Reversi" $@
 	$(RYFS) add $@ $<
 
-main.fxf: entry.asm binding_addresses.asm fox32.def.asm main.asm
+main.fxf: entry.asm binding_addresses.asm fox32.def.asm main.asm menu.asm
 	$(FOX32ASM) $< $@ > /dev/null
 
 binding_addresses.asm: main.dump
