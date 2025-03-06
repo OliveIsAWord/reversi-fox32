@@ -5,6 +5,12 @@ struct void
 fn null() void^mut:
     (0@mut as void^mut^)^
 
+fn max(anon n1: usize, anon n2: usize) usize:
+    if n1 > n2:
+        n1
+    else:
+        n2
+
 fn assert(anon condition: bool, anon msg: u8[^]):
     if condition:
         0

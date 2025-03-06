@@ -5,18 +5,25 @@ get_reversi_menu_impl:
     ret
 
 menu_items_root:
-    data.8 2                                                      ; number of menus
+    data.8 3                                                      ; number of menus
     data.32 menu_items_game_list data.32 menu_items_game_name     ; pointer to menu list, pointer to menu name
     data.32 menu_items_board_list data.32 menu_items_board_name   ; pointer to menu list, pointer to menu name
+    data.32 menu_items_info_list data.32 menu_items_info_name   ; pointer to menu list, pointer to menu name
 menu_items_game_name:
-    data.8 4 data.str "Game" data.8 0x00 ; text length, text, null-terminator
-menu_items_board_name:
-    data.8 5 data.str "Board" data.8 0x00 ; text length, text, null-terminator
+    data.8 4 data.str "Game" data.8 0 ; text length, text, null-terminator
 menu_items_game_list:
-    data.8 1                                 ; number of items
-    data.8 10                                ; menu width (usually longest item + 2)
-    data.8 8 data.str "New Game" data.8 0x00 ; text length, text, null-terminator
+    data.8 1                              ; number of items
+    data.8 10                             ; menu width (usually longest item + 2)
+    data.8 8 data.str "New Game" data.8 0 ; text length, text, null-terminator
+menu_items_board_name:
+    data.8 5 data.str "Board" data.8 0 ; text length, text, null-terminator
 menu_items_board_list:
-    data.8 1                                             ; number of items
-    data.8 21         ; 1234567890123456789              ; menu width (usually longest item + 2)
-    data.8 19 data.str "Toggle Move Preview" data.8 0x00 ; text length, text, null-terminator
+    data.8 1                                          ; number of items
+    data.8 21         ; 1234567890123456789           ; menu width (usually longest item + 2)
+    data.8 19 data.str "Toggle Move Preview" data.8 0 ; text length, text, null-terminator
+menu_items_info_name:
+    data.8 4 data.str "Info" data.8 0 ; text length, text, null-terminator
+menu_items_info_list:
+    data.8 1                                       ; number of items
+    data.8 18         ; 1234567890123456           ; menu width (usually longest item + 2)
+    data.8 16 data.str "About Reversi..." data.8 0 ; text length, text, null-terminator

@@ -274,11 +274,11 @@ fn end_game(anon _: App^mut):
             else if stone == STONE_WHITE:
                 score = score + 1
     let msg = if score == 0:
-        "   It's a tie!"
+        "  It's a tie!  "
     else if score > 1_000_000: # who needs signed comparisons?
-        "   Black wins!"
+        "  Black wins!  "
     else
-        "   White wins!"
+        "  White wins!  "
     # we use spaces because `draw_str_to_overlay` reads out of bounds on empty strings
     self^.window^@.message_box(
         line_1: " "
@@ -329,6 +329,13 @@ fn handle_menu_click(anon _: App^mut, anon menu_item: MenuItem):
             .reset_preview_radius(new_radius)
         else:
             q.p()
+    # Info
+    else if menu == 2:
+        # About Reversi...
+        if item == 0:
+            self^.window^@.message_box_about()
+        else:
+            q.p()
     else:
         q.p()
 
@@ -352,6 +359,7 @@ fn main(_: File^mut):
     let app = app@mut
     defer app.close_app()
 
+    let mut menu_item = MenuItem(menu: -1, item: -1)
     let mut running = true
     while running:
         yield_task()
@@ -396,13 +404,25 @@ fn main(_: File^mut):
             else if event.kind == EVENT_TYPE_MENU_CLICK:
                 let menu = event.parameters@[1]
                 let item = event.parameters@[2]
-                app.handle_menu_click(MenuItem(:menu, :item))
+                # we defer handling menu clicks until after the menu closes because fox32os doesn't like menus and messageboxes being open at the same time
+                assert(menu_item.menu == -1, "stale menu item menu")
+                assert(menu_item.menu == -1, "stale menu item item")
+                menu_item = MenuItem(:menu, :item)
             else if event.kind == EVENT_TYPE_MENU_ACK:
                 close_menu(:window^.menu_bar)
+                app.handle_menu_click(menu_item)
+                menu_item = MenuItem(menu: -1, item: -1)
             else:
                 .write("WARNING unknown event type=")
                 .write_usize(event.kind)
                 .write("\n")
+
+fn message_box_about(anon window: Window^):
+    .message_box(
+        line_1: "   Reversi  v0.1.1   "
+        line_2: "(c) 2025 OliveIsAWord"
+        line_3: "under the MIT license"
+    )
 
 fn message_box_pass(anon window: Window^):
     .message_box(
@@ -412,7 +432,10 @@ fn message_box_pass(anon window: Window^):
     )
 
 fn message_box(anon window: Window^, line_1: u8[^], line_2: u8[^], line_3: u8[^]):
-    let width = 160_u16
+    let width_chars = line_1.string_length()
+        .max(line_2.string_length())
+        .max(line_3.string_length())
+    let width = (width_chars * 8 + 16) as u16
     let x = window^.x + (WINDOW_WIDTH as u16 - width) / 2_u16
     let y = window^.y + (WINDOW_HEIGHT as u16 + 16_u16 - 88_u16) / 2_u16
     new_messagebox(:line_1, :line_2, :line_3, :x, :y, :width)
