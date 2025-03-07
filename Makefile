@@ -4,7 +4,7 @@ OLEAC := olea
 FOX32ASM := fox32asm
 RYFS := ryfs
 
-SOURCE = main.olea std.olea fox32os.def.olea fox32rom.def.olea
+SOURCE = main.olea board.olea std.olea fox32os.def.olea fox32rom.def.olea
 
 main.img: main.fxf
 	$(RYFS) create -l "Reversi" $@

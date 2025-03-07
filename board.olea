@@ -1,0 +1,190 @@
+# A Reversi game board.
+
+const STONE_PLACE = 0b00_u8 # empty square, can place a stone here
+const STONE_EMPTY = 0b01_u8 # empty square, cannot place a stone here
+const STONE_BLACK = 0b10_u8 # square with a black stone
+const STONE_WHITE = 0b11_u8 # square with a white stone
+
+const MOVE_INVALID = 41_u8 # the attempted move was invalid
+const MOVE_OK = 42_u8 # the move was made and it's the other player's turn
+const MOVE_PASS = 43_u8 # the move was made and the other player must pass
+const MOVE_END = 44_u8 # the move was made and it ended the game
+
+struct Board:
+    # Each row of the board is a `u16` conceptually split into eight 2-bit chunks each storing a STONE_*.
+    inner: u32[4]
+    # false - black to move, true - white to move
+    turn: bool
+
+fn board_empty() Board:
+    let mut inner = (null() as u32[4]^)^
+    let mut i = 0
+    while i < 4:
+        defer i = i + 1
+        # all STONE_EMPTY
+        inner@mut[i] = 0x5555_5555_u32
+    Board(:inner, turn: false)
+
+fn board_new() Board:
+    let mut this = board_empty()
+    this@mut.set_stone(x: 3_u8, y: 3_u8, stone: STONE_WHITE)
+    this@mut.set_stone(x: 4_u8, y: 3_u8, stone: STONE_BLACK)
+    this@mut.set_stone(x: 3_u8, y: 4_u8, stone: STONE_BLACK)
+    this@mut.set_stone(x: 4_u8, y: 4_u8, stone: STONE_WHITE)
+    let initial_moves = this@mut.calculate_moves()
+    assert(initial_moves == 4, "inital moves")
+    this
+
+# wow we need a `not` operator lmao
+fn switch_turn(anon _: Board^mut):
+    self^.turn = if self^.turn:
+        false
+    else:
+        true
+
+fn get_stone(anon _: Board^, x: u8, y: u8) u8:
+    assert(x < 8_u8, "x out of bounds")
+    assert(y < 8_u8, "y out of bounds")
+    let board = self^.inner@ as u16[8]^
+    let stone = (board[y as usize] >> (x as u16 * 2_u16)) as u8 & 3_u8
+    assert(stone <= 3_u8, "corrupted stone")
+    stone
+
+fn set_stone(anon _: Board^mut, x: u8, y: u8, stone: u8):
+    assert(x < 8_u8, "x out of bounds")
+    assert(y < 8_u8, "y out of bounds")
+    assert(stone <= 3_u8, "corrupted stone")
+
+    let board = self^.inner@mut as u16[8]^mut
+    # set the stone in the board state
+    let row = board[y as usize]@mut
+    let x = (x * 2_u8) as u16
+    row^ = row^ & (0xFFFF_u16 - 0b11_u16 << x) | stone as u16 << x
+
+# returns the number of valid moves the current player has
+fn calculate_moves(anon _: Board^mut) usize:
+    let mut num_valid_moves = 0
+    let mut x = 0_u8
+    while x < 8_u8:
+        defer x = x + 1_u8
+        let mut y = 0_u8
+        while y < 8_u8:
+            defer y = y + 1_u8
+            if self^@.get_stone(:x, :y) & 2_u8 == 0_u8:
+                .set_stone(:x, :y, stone: STONE_EMPTY)
+                .calculate_moves0(:x, :y, dx: 1_u8, dy: 0_u8)
+                .calculate_moves0(:x, :y, dx: 1_u8, dy: -1_u8)
+                .calculate_moves0(:x, :y, dx: 0_u8, dy: -1_u8)
+                .calculate_moves0(:x, :y, dx: -1_u8, dy: -1_u8)
+                .calculate_moves0(:x, :y, dx: -1_u8, dy: 0_u8)
+                .calculate_moves0(:x, :y, dx: -1_u8, dy: 1_u8)
+                .calculate_moves0(:x, :y, dx: 0_u8, dy: 1_u8)
+                .calculate_moves0(:x, :y, dx: 1_u8, dy: 1_u8)
+                if self^@.get_stone(:x, :y) == STONE_PLACE:
+                    num_valid_moves = num_valid_moves + 1
+    num_valid_moves
+
+fn calculate_moves0(anon _: Board^mut, x: u8, y: u8, dx: u8, dy: u8):
+    let enemy_stone = if self^.turn:
+        STONE_BLACK
+    else:
+        STONE_WHITE
+    let mut nx = x + dx
+    let mut ny = y + dy
+    let mut can_place_here = false
+    while 0_u8 <= nx < 8_u8
+        and 0_u8 <= ny < 8_u8
+        and self^@.get_stone(x: nx, y: ny) == enemy_stone:
+        nx = nx + dx
+        ny = ny + dy
+        can_place_here = true
+    if can_place_here
+        and 0_u8 <= nx < 8_u8
+        and 0_u8 <= ny < 8_u8
+        and self^@.get_stone(x: nx, y: ny) & 2_u8 != 0_u8:
+        .set_stone(:x, :y, stone: STONE_PLACE)
+
+fn make_move(anon _: Board^mut, x: u8, y: u8) u8:
+    if self^@.get_stone(:x, :y) != STONE_PLACE:
+        MOVE_INVALID
+    else:
+        .make_move_unchecked(:x, :y)
+
+fn make_move_unchecked(anon _: Board^mut, x: u8, y: u8) u8:
+    assert(self^@.get_stone(:x, :y) == STONE_PLACE, "invalid move")
+    let stone = if self^.turn:
+        STONE_WHITE
+    else:
+        STONE_BLACK
+    .set_stone(:x, :y, :stone)
+    .make_move0(:x, :y, dx: 1_u8, dy: 0_u8)
+    .make_move0(:x, :y, dx: 1_u8, dy: -1_u8)
+    .make_move0(:x, :y, dx: 0_u8, dy: -1_u8)
+    .make_move0(:x, :y, dx: -1_u8, dy: -1_u8)
+    .make_move0(:x, :y, dx: -1_u8, dy: 0_u8)
+    .make_move0(:x, :y, dx: -1_u8, dy: 1_u8)
+    .make_move0(:x, :y, dx: 0_u8, dy: 1_u8)
+    .make_move0(:x, :y, dx: 1_u8, dy: 1_u8)
+
+    # calculate whose move it is
+    .switch_turn()
+    if .calculate_moves() > 0:
+        MOVE_OK
+    else:
+        .switch_turn()
+        if .calculate_moves() > 0:
+            MOVE_PASS
+        else:
+            MOVE_END
+
+fn make_move0(anon _: Board^mut, x: u8, y: u8, dx: u8, dy: u8):
+    let stone = if self^.turn:
+        STONE_WHITE
+    else:
+        STONE_BLACK
+
+    let enemy_stone = if self^.turn:
+        STONE_BLACK
+    else:
+        STONE_WHITE
+    let mut nx = x + dx
+    let mut ny = y + dy
+    while 0_u8 <= nx < 8_u8
+        and 0_u8 <= ny < 8_u8
+        and self^@.get_stone(x: nx, y: ny) == enemy_stone:
+        nx = nx + dx
+        ny = ny + dy
+    if 0_u8 <= nx < 8_u8
+        and 0_u8 <= ny < 8_u8
+        and self^@.get_stone(x: nx, y: ny) == stone:
+        nx = nx - dx
+        ny = ny - dy
+        while self^@.get_stone(x: nx, y: ny) == enemy_stone:
+            defer:
+                nx = nx - dx
+                ny = ny - dy
+            .set_stone(x: nx, y: ny, :stone)
+
+fn board_score(anon _: Board^) usize:
+    let mut score = 0 # negative means black wins
+    let mut empty = 0 # empty squares are counted towards the victor
+    let mut y = 0_u8
+    while y < 8_u8:
+        defer y = y + 1_u8
+        let mut x = 0_u8
+        while x < 8_u8:
+            defer x = x + 1_u8
+            let stone = .get_stone(:x, :y)
+            if stone == STONE_BLACK:
+                score = score - 1
+            else if stone == STONE_WHITE:
+                score = score + 1
+            else if stone == STONE_EMPTY:
+                empty = empty + 1
+            else:
+                panic("unexpected stone during scoring")
+    if score > 1_000_000:
+        score = score - empty
+    else if score > 0:
+        score = score + empty
+    score
