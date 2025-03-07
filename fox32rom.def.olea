@@ -133,7 +133,10 @@ extern fn menu_update_event(_, _unused: usize, menu_bar: void^, selected_menu_ba
 # ; memory copy/compare jump table
 # copy_memory_bytes:                        jmp [0xF0046000]
 # copy_memory_words:                        jmp [0xF0046004]
-# copy_string:                              jmp [0xF0046008]
+
+## 0xF0046008
+extern fn copy_string(source: u8[^], dest: u8[^]mut)
+
 # compare_memory_bytes:                     jmp [0xF004600C]
 # compare_memory_words:                     jmp [0xF0046010]
 # compare_string:                           jmp [0xF0046014]

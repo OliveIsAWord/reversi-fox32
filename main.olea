@@ -135,11 +135,41 @@ fn redraw_board(anon _: App^mut):
             let old_stone = self^.previous_board@.get_stone(:x, :y)
             .redraw_stone(:x, :y, :old_stone, :stone)
 
+fn make_score_string(score: usize) u8[12]:
+    #             123456789012
+    let source = "    ** - **"
+    let mut score_string = (null() as u8[12]^)^
+    copy_string(:source, dest: score_string@mut as u8[^]mut)
+    # white_score - black_score == score
+    # white_score + black_score == 64
+    let black_score = (64 - score) / 2
+    let white_score = 64 - black_score
+    score_string@mut[4]@mut as u8[2]^mut.make_score_string0(player_score: black_score, color: false)
+    score_string@mut[9]@mut as u8[2]^mut.make_score_string0(player_score: white_score, color: true)
+    score_string
+
+fn make_score_string0(string: u8[2]^mut, player_score: usize, color: bool):
+    let tens_digit = (player_score / 10) as u8
+    let ones_digit = player_score as u8 - tens_digit * 10_u8
+    let ascii_zero = 0x30_u8
+    let ascii_space = 0x20_u8
+    if tens_digit == 0_u8:
+        # left or right align
+        if color:
+            string[0] = ones_digit + ascii_zero
+            string[1] = ascii_space
+        else:
+            string[0] = ascii_space
+            string[1] = ones_digit + ascii_zero
+    else:
+        string[0] = tens_digit + ascii_zero
+        string[1] = ones_digit + ascii_zero
+
 fn end_game(anon _: App^):
     let score = self^.board@.board_score()
+    let score_string = make_score_string(:score)
     let msg = if score == 0:
         "  It's a tie!  "
-      # "    64 - 64    "
     else if score > 1_000_000: # who needs signed comparisons?
         "  Black wins!  "
     else
@@ -148,7 +178,7 @@ fn end_game(anon _: App^):
     self^.window^@.message_box(
         line_1: " "
         line_2: msg
-        line_3: " "
+        line_3: score_string@ as u8[^]
     )
 
 fn handle_mouse_click(anon _: App^mut, x: usize, y: usize):
