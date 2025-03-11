@@ -4,6 +4,13 @@ extern fn millis() usize
 
 extern fn get_reversi_menu() void^
 
+fn message_box_about(anon window: Window^):
+    .message_box(
+        line_1: "   Reversi  v0.1.2   " # NOTE: Update this as appropriate!
+        line_2: "(c) 2025 OliveIsAWord"
+        line_3: "under the MIT license"
+    )
+
 const WINDOW_WIDTH = 255
 const WINDOW_HEIGHT = 255
 
@@ -319,13 +326,6 @@ fn main(_: File^mut):
                 .write("WARNING unknown event type=")
                 .write_usize(event.kind)
                 .write("\n")
-
-fn message_box_about(anon window: Window^):
-    .message_box(
-        line_1: "   Reversi  v0.1.1   "
-        line_2: "(c) 2025 OliveIsAWord"
-        line_3: "under the MIT license"
-    )
 
 fn message_box_pass(anon window: Window^):
     .message_box(
