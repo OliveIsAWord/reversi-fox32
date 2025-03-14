@@ -11,6 +11,10 @@ fn max(anon n1: usize, anon n2: usize) usize:
     else:
         n2
 
+fn u32_saturating_add(anon a: u32, anon b: u32) u32:
+    let sum = a + b
+    if sum < a: -1u32 else sum
+
 fn assert(anon condition: bool, anon msg: u8[^]):
     if condition:
         0

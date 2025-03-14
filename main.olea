@@ -19,7 +19,10 @@ const COLOR_EDGE = 0x334466
 const COLOR_BLACK = 0x222233
 const COLOR_WHITE = 0xffeebb
 
+const STONE_RADIUS = 13
 const PREVIEW_RADIUS_DEFAULT = 2
+
+const MOVE_SPEED_MEDIUM = 60u32
 
 fn color(anon bytes: usize) Color:
     Color(
@@ -36,7 +39,14 @@ fn draw_horizontal_line_to_overlay(_, x: usize, y: usize, width: usize, color: C
     draw_filled_rectangle_to_overlay(:x, :y, :width, height: 1, :color, :overlay)
 
 # x and y are the center of the circle
-fn draw_circle_to_overlay(_, x: usize, y: usize, radius: usize, color: Color, overlay: u8):
+fn draw_circle_to_overlay(
+    _
+    x: usize
+    y: usize
+    radius: usize
+    color: Color
+    overlay: u8
+):
     let mut y1 = y - radius
     while y1 <= y + radius:
         defer y1 = y1 + 1
@@ -53,6 +63,13 @@ struct App:
     window: Window^mut
     board: Board
     previous_board: Board
+    # top 16 bits is squares, bottom 16 bits is per square
+    anim_timer: u32
+    # animation speed in stones / ms / 2^16
+    anim_speed: u32
+    # top 8 bits is x, bottom 8 bits is y
+    prev_move: u16
+    prev_millis: usize
     preview_radius: usize
 
 fn new_app(window: Window^mut) App:
@@ -60,10 +77,15 @@ fn new_app(window: Window^mut) App:
         :window
         previous_board: board_empty()
         board: board_new()
+        anim_timer: -1u32
+        anim_speed: MOVE_SPEED_MEDIUM
+        prev_move: 0u16
+        prev_millis: millis()
         preview_radius: PREVIEW_RADIUS_DEFAULT
     )
     app@.clear_display()
-    app@mut.redraw_board()
+    app@mut._redraw_board()
+    app.previous_board = app.board
     app
 
 fn clear_display(anon _: App^):
@@ -77,7 +99,74 @@ fn clear_display(anon _: App^):
         draw_horizontal_line_to_overlay(x: 0, y: i + 16, width: WINDOW_WIDTH, color: edge_color, :overlay)
         i = i + 32
 
-fn reset_preview_radius(anon _: App^mut, anon new_radius: usize):
+fn app_draw(anon _: App^mut):
+    let now = millis()
+    let dt = (now - self^.prev_millis) as u32 
+    self^.prev_millis = now
+    let prev_anim = self^.anim_timer
+    let anim = prev_anim.u32_saturating_add(dt * self^.anim_speed)
+    self^.anim_timer = if anim >= 0x0100_0000u32: -1u32 else anim
+    let x = (self^.prev_move >> 8u16) as u8
+    let y = self^.prev_move as u8
+    let i = (anim >> 16u32) as u8
+    let anim_per_stone = anim as u16
+    let prev_i = (prev_anim >> 16u32) as u8
+    let prev_anim_per_stone = prev_anim as u16
+    :
+        let mut finished_i = prev_i
+        while finished_i < i:
+            defer finished_i = finished_i + 1u8
+            let i = finished_i
+            if i == 0u8:
+                .draw_stone_finished(:x, :y)
+            else if i < 8u8:
+                let Z = 0u8
+                .draw_stone_finished(x: x + i, y: y + Z)
+                .draw_stone_finished(x: x + i, y: y + i)
+                .draw_stone_finished(x: x + Z, y: y + i)
+                .draw_stone_finished(x: x - i, y: y + i)
+                .draw_stone_finished(x: x - i, y: y + Z)
+                .draw_stone_finished(x: x - i, y: y - i)
+                .draw_stone_finished(x: x + Z, y: y - i)
+                .draw_stone_finished(x: x + i, y: y - i)
+    if i == 0u8:
+        .draw_stone_flip(:x, :y, :anim_per_stone)
+    else if i < 8u8:
+        let Z = 0u8
+        .draw_stone_flip(x: x + i, y: y + Z, :anim_per_stone)
+        .draw_stone_flip(x: x + i, y: y + i, :anim_per_stone)
+        .draw_stone_flip(x: x + Z, y: y + i, :anim_per_stone)
+        .draw_stone_flip(x: x - i, y: y + i, :anim_per_stone)
+        .draw_stone_flip(x: x - i, y: y + Z, :anim_per_stone)
+        .draw_stone_flip(x: x - i, y: y - i, :anim_per_stone)
+        .draw_stone_flip(x: x + Z, y: y - i, :anim_per_stone)
+        .draw_stone_flip(x: x + i, y: y - i, :anim_per_stone)
+
+fn draw_stone_finished(anon _: App^mut, x: u8, y: u8):
+    if x < 8u8 and y < 8u8 and self^.board@.get_stone(:x, :y) & 2u8 != 0u8 and self^.previous_board@.get_stone(:x, :y) != self^.board@.get_stone(:x, :y):
+        self^.previous_board@mut.set_stone(:x, :y, stone: self^.board@.get_stone(:x, :y)) 
+        .draw_stone_generic(:x, :y, radius: STONE_RADIUS)
+
+fn draw_stone_flip(anon _: App^mut, x: u8, y: u8, anim_per_stone: u16):
+    if x < 8u8 and y < 8u8 and self^.board@.get_stone(:x, :y) & 2u8 != 0u8 and self^.previous_board@.get_stone(:x, :y) != self^.board@.get_stone(:x, :y):
+        let radius = anim_per_stone as usize * STONE_RADIUS / 0x1_0000
+        .draw_stone_generic(:x, :y, :radius)
+
+fn draw_stone_generic(anon _: App^mut, x: u8, y: u8, radius: usize):
+    if x < 8u8 and y < 8u8:
+        draw_circle_to_overlay(
+            :self^.window^.overlay
+            x: 32 * x as usize + 15
+            y: 32 * y as usize + 31
+            :radius
+            color:
+                if self^.previous_board.turn:
+                    color(COLOR_WHITE)
+                else:
+                    color(COLOR_BLACK)
+        )
+
+fn _reset_preview_radius(anon _: App^mut, anon new_radius: usize):
     defer self^.preview_radius = new_radius
     let old_radius = self^.preview_radius
     let mut x = 0_u8
@@ -88,12 +177,12 @@ fn reset_preview_radius(anon _: App^mut, anon new_radius: usize):
             defer y = y + 1_u8
             if self^.board@.get_stone(:x, :y) == STONE_PLACE:
                 if old_radius > new_radius:
-                    .redraw_stone(:x, :y, old_stone: STONE_PLACE, stone: STONE_EMPTY)
+                    ._redraw_stone(:x, :y, old_stone: STONE_PLACE, stone: STONE_EMPTY)
                 self^.preview_radius = new_radius
-                .redraw_stone(:x, :y, old_stone: STONE_EMPTY, stone: STONE_PLACE)
+                ._redraw_stone(:x, :y, old_stone: STONE_EMPTY, stone: STONE_PLACE)
                 self^.preview_radius = old_radius
 
-fn redraw_stone(anon _: App^mut, x: u8, y: u8, old_stone: u8, stone: u8): if old_stone != stone or stone == STONE_PLACE:
+fn _redraw_stone(anon _: App^mut, x: u8, y: u8, old_stone: u8, stone: u8): if old_stone != stone or stone == STONE_PLACE:
     let overlay = self^.window^.overlay
     let x = 32 * x as usize + 15
     let y = 32 * y as usize + 31
@@ -131,7 +220,7 @@ fn redraw_stone(anon _: App^mut, x: u8, y: u8, old_stone: u8, stone: u8): if old
         :overlay
     )
 
-fn redraw_board(anon _: App^mut):
+fn _redraw_board(anon _: App^mut):
     let mut y = 0_u8
     while y < 8_u8:
         defer y = y + 1_u8
@@ -140,7 +229,7 @@ fn redraw_board(anon _: App^mut):
             defer x = x + 1_u8
             let stone = self^.board@.get_stone(:x, :y)
             let old_stone = self^.previous_board@.get_stone(:x, :y)
-            .redraw_stone(:x, :y, :old_stone, :stone)
+            ._redraw_stone(:x, :y, :old_stone, :stone)
 
 fn make_score_string(score: usize) u8[12]:
     #             123456789012
@@ -191,9 +280,19 @@ fn end_game(anon _: App^):
 fn handle_mouse_click(anon _: App^mut, x: usize, y: usize):
     let x = (x / 32) as u8
     let y = (y / 32) as u8
+    :
+        let mut x = 0_u8
+        while x < 8_u8:
+            defer x = x + 1_u8
+            let mut y = 0_u8
+            while y < 8_u8:
+                defer y = y + 1_u8
+                .draw_stone_finished(:x, :y)
     self^.previous_board = self^.board
     let move_result = self^.board@mut.make_move(:x, :y)
-    .redraw_board()
+    self^.anim_timer = 0x8000u32
+    self^.prev_move = x as u16 << 8u16 + y as u16
+    #._redraw_board()
     if move_result == MOVE_INVALID or move_result == MOVE_OK: 0
     else if move_result == MOVE_PASS: self^.window^@.message_box_pass()
     else if move_result == MOVE_END: self^@.end_game()
@@ -220,9 +319,14 @@ fn handle_menu_click(anon _: App^mut, anon menu_item: MenuItem):
                 :self^.window
                 board: board_new()
                 previous_board: self^.board
+                anim_timer: -1u32
+                :self^.anim_speed
+                prev_move: 0u16
+                prev_millis: 0
                 :self^.preview_radius
             )
-            .redraw_board()
+            ._redraw_board()
+            self^.previous_board = self^.board
         else:
             q.p()
     # Board
@@ -233,7 +337,7 @@ fn handle_menu_click(anon _: App^mut, anon menu_item: MenuItem):
                 0
             else:
                 PREVIEW_RADIUS_DEFAULT
-            .reset_preview_radius(new_radius)
+            ._reset_preview_radius(new_radius)
         else:
             q.p()
     # Info
@@ -269,6 +373,7 @@ fn main(_: File^mut):
     let mut menu_item = MenuItem(menu: -1, item: -1)
     let mut running = true
     while running:
+        app.app_draw()
         yield_task()
         let mut event = Event(kind: EVENT_TYPE_MOUSE_CLICK, parameters: (null() as usize[7]^)^)
         while event.kind != EVENT_TYPE_EMPTY:
