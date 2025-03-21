@@ -34,7 +34,7 @@ fn color(anon bytes: usize) Color:
 
 fn draw_vertical_line_to_overlay(_, x: usize, y: usize, height: usize, color: Color, overlay: u8):
     draw_filled_rectangle_to_overlay(:x, :y, width: 1, :height, :color, :overlay)
-    
+
 fn draw_horizontal_line_to_overlay(_, x: usize, y: usize, width: usize, color: Color, overlay: u8):
     draw_filled_rectangle_to_overlay(:x, :y, :width, height: 1, :color, :overlay)
 
@@ -84,7 +84,7 @@ fn new_app(window: Window^mut) App:
         preview_radius: PREVIEW_RADIUS_DEFAULT
     )
     app@.clear_display()
-    app@mut._redraw_board()
+    app@mut.redraw_board()
     app.previous_board = app.board
     app
 
@@ -101,7 +101,7 @@ fn clear_display(anon _: App^):
 
 fn app_draw(anon _: App^mut):
     let now = millis()
-    let dt = (now - self^.prev_millis) as u32 
+    let dt = (now - self^.prev_millis) as u32
     self^.prev_millis = now
     let prev_anim = self^.anim_timer
     let anim = prev_anim.u32_saturating_add(dt * self^.anim_speed)
@@ -153,17 +153,20 @@ fn draw_stone_flip(anon _: App^mut, x: u8, y: u8, anim_per_stone: u16):
         .draw_stone_generic(:x, :y, :radius)
 
 fn draw_stone_generic(anon _: App^mut, x: u8, y: u8, radius: usize):
+    let color = if self^.previous_board.turn:
+        color(COLOR_WHITE)
+    else:
+        color(COLOR_BLACK)
+    .draw_stone_generic_color(:x, :y, :radius, :color)
+
+fn draw_stone_generic_color(anon _: App^mut, x: u8, y: u8, radius: usize, color: Color):
     if x < 8u8 and y < 8u8:
         draw_circle_to_overlay(
             :self^.window^.overlay
             x: 32 * x as usize + 15
             y: 32 * y as usize + 31
             :radius
-            color:
-                if self^.previous_board.turn:
-                    color(COLOR_WHITE)
-                else:
-                    color(COLOR_BLACK)
+            :color
         )
 
 fn _reset_preview_radius(anon _: App^mut, anon new_radius: usize):
@@ -220,16 +223,14 @@ fn _redraw_stone(anon _: App^mut, x: u8, y: u8, old_stone: u8, stone: u8): if ol
         :overlay
     )
 
-fn _redraw_board(anon _: App^mut):
-    let mut y = 0_u8
-    while y < 8_u8:
-        defer y = y + 1_u8
+fn redraw_board(anon _: App^mut):
         let mut x = 0_u8
         while x < 8_u8:
             defer x = x + 1_u8
-            let stone = self^.board@.get_stone(:x, :y)
-            let old_stone = self^.previous_board@.get_stone(:x, :y)
-            ._redraw_stone(:x, :y, :old_stone, :stone)
+            let mut y = 0_u8
+            while y < 8_u8:
+                defer y = y + 1_u8
+                .draw_stone_finished(:x, :y)
 
 fn make_score_string(score: usize) u8[12]:
     #             123456789012
@@ -280,14 +281,7 @@ fn end_game(anon _: App^):
 fn handle_mouse_click(anon _: App^mut, x: usize, y: usize):
     let x = (x / 32) as u8
     let y = (y / 32) as u8
-    :
-        let mut x = 0_u8
-        while x < 8_u8:
-            defer x = x + 1_u8
-            let mut y = 0_u8
-            while y < 8_u8:
-                defer y = y + 1_u8
-                .draw_stone_finished(:x, :y)
+    .redraw_board()
     self^.previous_board = self^.board
     let move_result = self^.board@mut.make_move(:x, :y)
     self^.anim_timer = 0x8000u32
@@ -297,7 +291,6 @@ fn handle_mouse_click(anon _: App^mut, x: usize, y: usize):
     else if move_result == MOVE_PASS: self^.window^@.message_box_pass()
     else if move_result == MOVE_END: self^@.end_game()
     else panic("invalid move result")
-                
 
 struct MenuItem:
     menu: usize
@@ -325,7 +318,7 @@ fn handle_menu_click(anon _: App^mut, anon menu_item: MenuItem):
                 prev_millis: 0
                 :self^.preview_radius
             )
-            ._redraw_board()
+            .redraw_board()
             self^.previous_board = self^.board
         else:
             q.p()
